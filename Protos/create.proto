@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option csharp_namespace = "GrpcVillage";
+
+package create;
+
+service Creater {
+  rpc StartVillage (VillageStartup) returns (stream VillageStatus);
+}
+
+message VillageStartup {
+  string name = 1;
+  int32 people = 2;
+  string climate = 3;
+  int32 technology = 4;
+  string starttime = 5;
+}
+
+message VillageStatus {
+  string time = 1;
+  string message = 2;
+  int32 people = 3;
+}
