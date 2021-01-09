@@ -58,7 +58,7 @@ namespace GrpcVillage.Engine
                     Tick();
                     if (_context.CancellationToken.IsCancellationRequested) break;
                     await crier.WriteAsync(_status);
-                    if (_status.People > 500)
+                    if (_status.People > 350)
                     {
                         _running = false;
                     }
@@ -75,34 +75,62 @@ namespace GrpcVillage.Engine
             }
         }
 
-        private async void Tick()
+        private void Tick()
+        {
+            AdvanceTime();
+
+            GetOlder();
+
+            Pregnancies();
+
+            List<Villager> newVillagers = Births();
+
+            List<Villager> deadVillagers = Deaths();
+
+            SetStatus(newVillagers, deadVillagers);
+        }
+
+        private void AdvanceTime()
         {
             _month = _month == 12 ? 1 : _month + 1;
             _year = _month == 1 ? _year + 1 : _year;
+        }
 
-            var rnd = _r.Next(0, _status.People / 2);
-
-            // get older
-            foreach (var v in _villagers)
+        private void SetStatus(List<Villager> newVillagers, List<Villager> deadVillagers)
+        {
+            _status.People = _villagers.Count;
+            if (deadVillagers.Count > 0 || newVillagers.Count > 0)
             {
-                if (v.MonthBorn == _month)
-                {
-                    v.Age++;
-                }
+                _status.Message = $"There are {_status.People} in the village, there have been {deadVillagers.Count} deaths and {newVillagers.Count} births";
             }
+            else
+            {
+                _status.Message = "";
+            }
+            _status.Time = $"{_month.ToString('m')}, The Year of our Lord {_year}";
+        }
 
-            // get pregnant
-            foreach (var v in _villagers.Where(v => v.IsFertile && !v.IsMale && !v.IsPregnant))
+        private List<Villager> Deaths()
+        {
+            var deadVillagers = new List<Villager>();
+            foreach (var v in _villagers.Where(v => v.DeathRoll))
             {
                 var roll = _r.Next(100);
-                if (roll > 66)
+                if (roll > (99 - (v.LifeExpectancy / 2 + v.Age)))
                 {
-                    v.IsPregnant = true;
-                    v.MonthsUntilBirth = 9;
+                    deadVillagers.Add(v);
                 }
             }
+            foreach (var v in deadVillagers)
+            {
+                _villagers.Remove(v);
+            }
 
-            // give birth
+            return deadVillagers;
+        }
+
+        private List<Villager> Births()
+        {
             var newVillagers = new List<Villager>();
             foreach (var v in _villagers.Where(v => v.IsPregnant))
             {
@@ -119,34 +147,31 @@ namespace GrpcVillage.Engine
                 }
             }
             _villagers.AddRange(newVillagers);
+            return newVillagers;
+        }
 
-            // die
-            var deadVillagers = new List<Villager>();
-            foreach (var v in _villagers.Where(v => v.DeathRoll))
+        private void Pregnancies()
+        {
+            foreach (var v in _villagers.Where(v => v.IsFertile && !v.IsMale && !v.IsPregnant))
             {
                 var roll = _r.Next(100);
-                if (roll > (99 - (v.LifeExpectancy / 2 + v.Age)))
+                if (roll > 66)
                 {
-                    deadVillagers.Add(v);
+                    v.IsPregnant = true;
+                    v.MonthsUntilBirth = 9;
                 }
             }
-            foreach (var v in deadVillagers)
-            {
-                _villagers.Remove(v);
-            }
+        }
 
-            //report
-            _status.People = _villagers.Count;
-            if (deadVillagers.Count > 0 || newVillagers.Count > 0)
+        private void GetOlder()
+        {
+            foreach (var v in _villagers)
             {
-                _status.Message = $"There are {_status.People} in the village, there have been {deadVillagers.Count} deaths and {newVillagers.Count} births";
+                if (v.MonthBorn == _month)
+                {
+                    v.Age++;
+                }
             }
-            else
-            {
-                _status.Message = "";
-            }
-            _status.Time = $"{_month.ToString('m')}, The Year of our Lord {_year}";
-            
         }
     }
 }
