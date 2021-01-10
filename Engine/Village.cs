@@ -56,14 +56,25 @@ namespace GrpcVillage.Engine
                 {
                     await Task.Delay(16);
                     Tick();
-                    if (_context.CancellationToken.IsCancellationRequested) break;
-                    await crier.WriteAsync(_status);
-                    if (_status.People > 350)
+
+                    if (_context.CancellationToken.IsCancellationRequested) 
+                        break;
+
+                    if (_status.Message != "")
+                    {
+                        await crier.WriteAsync(_status);
+                    }
+
+                    if (_status.People > 349 || _year > 500)
                     {
                         _running = false;
                     }
                 }
-                _status.Message = $"The village of the '{_startup.Name}' has finished its glorious mission!";
+                
+                _status.Message = _status.People > 349 
+                    ? $"The village of the '{_startup.Name}' has finished its glorious mission!" 
+                    : $"Woe betide the village of the '{_startup.Name}', for it has failed its mission!";
+                
                 if (!_context.CancellationToken.IsCancellationRequested)
                 {
                     await crier.WriteAsync(_status);
@@ -83,9 +94,9 @@ namespace GrpcVillage.Engine
 
             Pregnancies();
 
-            List<Villager> newVillagers = Births();
+            var newVillagers = Births();
 
-            List<Villager> deadVillagers = Deaths();
+            var deadVillagers = Deaths();
 
             SetStatus(newVillagers, deadVillagers);
         }
